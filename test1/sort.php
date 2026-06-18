@@ -1,22 +1,15 @@
 <?php
 
-// Встроенная функция sort() в PHP обычно работает быстрее,
-// так как реализована на уровне ядра языка.
-// Для демонстрации алгоритмического подхода реализована итеративная быстрая сортировка:
-// Iterative QuickSort с Insertion Sort для малых диапазонов
-// и Median-of-three для выбора опорного элемента.
-// Также добавлен простой benchmark для проверки корректности и сравнения с sort().
-
 declare(strict_types=1);
 
 function generateNumbers(int $count): array
 {
     mt_srand(42);
 
-    $data = [];
+    $data = array_fill(0, $count, 0);
 
     for ($i = 0; $i < $count; $i++) {
-        $data[] = mt_rand(-1_000_000, 1_000_000);
+        $data[$i] = mt_rand(-1_000_000, 1_000_000);
     }
 
     return $data;
@@ -136,9 +129,13 @@ function isSortedAsc(array $data): bool
     return true;
 }
 
-function benchmark(string $title, callable $sortFunction, array $data): void
+function benchmark(string $title, callable $sortFunction, array $originalData): void
 {
     echo "\n=== {$title} ===\n";
+
+    memory_reset_peak_usage();
+
+    $data = $originalData;
 
     $memoryBefore = memory_get_usage(true);
     $start = hrtime(true);
@@ -151,35 +148,40 @@ function benchmark(string $title, callable $sortFunction, array $data): void
 
     $timeMs = ($end - $start) / 1_000_000;
 
-    echo "Check sorted: " . (isSortedAsc($data) ? 'OK' : 'FAILED') . PHP_EOL;
-    echo "First 10: " . implode(', ', array_slice($data, 0, 10)) . PHP_EOL;
-    echo "Last 10: " . implode(', ', array_slice($data, -10)) . PHP_EOL;
-    echo "Time: " . round($timeMs, 2) . " ms" . PHP_EOL;
-    echo "Memory before: " . round($memoryBefore / 1024 / 1024, 2) . " MB" . PHP_EOL;
-    echo "Memory after: " . round($memoryAfter / 1024 / 1024, 2) . " MB" . PHP_EOL;
-    echo "Peak memory: " . round($memoryPeak / 1024 / 1024, 2) . " MB" . PHP_EOL;
+    echo 'Check sorted: ' . (isSortedAsc($data) ? 'OK' : 'FAILED') . PHP_EOL;
+    echo 'First 10: ' . implode(', ', array_slice($data, 0, 10)) . PHP_EOL;
+    echo 'Last 10: ' . implode(', ', array_slice($data, -10)) . PHP_EOL;
+    echo 'Time: ' . round($timeMs, 2) . ' ms' . PHP_EOL;
+    echo 'Memory before: ' . round($memoryBefore / 1024 / 1024, 2) . ' MB' . PHP_EOL;
+    echo 'Memory after: ' . round($memoryAfter / 1024 / 1024, 2) . ' MB' . PHP_EOL;
+    echo 'Peak memory: ' . round($memoryPeak / 1024 / 1024, 2) . ' MB' . PHP_EOL;
 }
 
-$count = isset($argv[1]) ? (int)$argv[1] : 200_000;
+$count = isset($argv[1]) ? (int) $argv[1] : 200_000;
+
+if ($count < 1) {
+    fwrite(STDERR, "Count must be a positive integer.\n");
+    exit(1);
+}
 
 echo "Generating {$count} numbers..." . PHP_EOL;
 
 $originalData = generateNumbers($count);
 
-echo "Source first 10: " . implode(', ', array_slice($originalData, 0, 10)) . PHP_EOL;
+echo 'Source first 10: ' . implode(', ', array_slice($originalData, 0, 10)) . PHP_EOL;
 
 benchmark(
-    'Custom iterative QuickSort',
+    'PHP built-in sort (recommended)',
     function (array &$data): void {
-        quickSort($data);
+        sort($data, SORT_NUMERIC);
     },
     $originalData
 );
 
 benchmark(
-    'PHP built-in sort for comparison',
+    'Custom iterative QuickSort',
     function (array &$data): void {
-        sort($data, SORT_NUMERIC);
+        quickSort($data);
     },
     $originalData
 );
